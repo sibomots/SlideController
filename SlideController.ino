@@ -54,23 +54,23 @@ const int contactParkSwitchPin = 9;
 // The 'state' machine is a graph of which nodes of functionality execute
 // based on parameters determined during run-time.
 typedef enum {
-	PRE_INIT,
-	INIT,
-	MOVE_TO_END,
-	CHECK_END_SWITCH,
-	STOP_AT_END,
-	MOVE_TO_PARK,
-	CHECK_PARK_SWITCH,
-	STOP_AT_PARK,
-	CHECK_COUNTS,
-	ROTATE_GEAR,
-	CHECK_ROTATION,
-	DONE_ROTATION,
-	COMPLETED_GEAR,
-	RESET,
+    PRE_INIT,
+    INIT,
+    MOVE_TO_END,
+    CHECK_END_SWITCH,
+    STOP_AT_END,
+    MOVE_TO_PARK,
+    CHECK_PARK_SWITCH,
+    STOP_AT_PARK,
+    CHECK_COUNTS,
+    ROTATE_GEAR,
+    CHECK_ROTATION,
+    DONE_ROTATION,
+    COMPLETED_GEAR,
+    RESET,
 } State;
 
-// Globals Variables
+// Globals Variable
 // These change during execution
 int numTeethCut = 0;
 int gearRotationCount = 0;
@@ -83,27 +83,27 @@ State state = PRE_INIT;
 // else return 0  (false)
 bool doneWithGear()
 {
-	if (numTeethCut == NUMBER_OF_TEETH)
-	{
-		return true;
-	}
-	return false;
+    if (numTeethCut == NUMBER_OF_TEETH)
+    {
+        return true;
+    }
+    return false;
 }
 
 // If the End Switch has made contact, return 1 (true)
 // else return 0 (false)
 bool readEndSwitchContact()
 {
-	int pin = digitalRead(contactEndSwitchPin);
-	return (pin != 0);
+    int pin = digitalRead(contactEndSwitchPin);
+    return (pin != 0);
 }
 
 // If the Park Switch has made contact, return 1 (true)
 // else return 0 (false)
 bool readParkSwitchContact()
 {
-	int pin = digitalRead(contactParkSwitchPin);
-	return (pin != 0);
+    int pin = digitalRead(contactParkSwitchPin);
+    return (pin != 0);
 }
 
 // enable the slide motor.  The slide motor is
@@ -111,7 +111,7 @@ bool readParkSwitchContact()
 // to activate the motor.
 void enableSlide()
 {
-	digitalWrite(slideEnablePin, N_ENABLE);
+    digitalWrite(slideEnablePin, N_ENABLE);
 }
 
 // disable the slide motor.  The slide motor is
@@ -119,7 +119,7 @@ void enableSlide()
 // to de-activate the motor.
 void disableSlide()
 {
-	digitalWrite(slideEnablePin, N_DISABLE);
+    digitalWrite(slideEnablePin, N_DISABLE);
 }
 
 // enable the gear-rotation motor.  The motor is
@@ -127,8 +127,8 @@ void disableSlide()
 // to activate the motor.
 void enableGearRotation()
 {
-	// active low
-	digitalWrite(gearEnablePin, N_ENABLE);
+    // active low
+    digitalWrite(gearEnablePin, N_ENABLE);
 }
 
 // disable the gear-rotation motor.  The motor is
@@ -136,199 +136,273 @@ void enableGearRotation()
 // to de-activate the motor.
 void disableGearRotation()
 {
-	// active low
-	digitalWrite(gearEnablePin, N_DISABLE);
+    // active low
+    digitalWrite(gearEnablePin, N_DISABLE);
 }
 
-
+// given a motor direction value (CW or CCW), set
+// the direction
 void setSlideDirection(int dir)
 {
-	if (dir > 0) {
-		digitalWrite(slideDirectionPin, CW);
-	}
-	else {
-		digitalWrite(slideDirectionPin, CCW);
-	}
+    // only valid directions, please
+    if ((dir == CCW || dir == CW)) 
+    {
+        digitalWrite(slideDirectionPin, dir);
+    }
 }
 
+// given a motor direction value (CW or CCW), set
+// the direction
 void setGearDirection(int dir)
 {
-	if (dir > 0) {
-		digitalWrite(gearDirectionPin, CW);
-	}
-	else {
-		digitalWrite(gearDirectionPin, CCW);
-	}
+    // only valid directions, please
+    if ((dir == CCW || dir == CW)) 
+    {
+        digitalWrite(gearDirectionPin, dir);
+    }
 }
 
 // TODO  calibrate the gear rotation pulse signal.
 void pulseGearPin()
 {
-	static int value = 0;
-	static long last = micros();
-	long current_micro = micros();
-	if ((current_micro - last) >= 10000) {
-		digitalWrite(gearPulsePin, value);
-		value = !value;
-		last = micros();
-	}
+    static int value = 0;
+    static long last = micros();
+    long current_micro = micros();
+    if ((current_micro - last) >= 10000) 
+    {
+        digitalWrite(gearPulsePin, value);
+        value = !value;
+        last = micros();
+    }
 }
 
 // TODO  calibrate the slide pulse signal.
 void pulseSlidePin()
 {
-	static int value = 0;
-	static long last = micros();
-
-	long current_micro = micros();
-
-	if ((current_micro - last) >= 10000) {
-		digitalWrite(slidePulsePin, value);
-		value = !value;
-		last = micros();
-	}
+    static int value = 0;
+    static long last = micros();
+    long current_micro = micros();
+    if ((current_micro - last) >= 10000) 
+    {
+        digitalWrite(slidePulsePin, value);
+        value = !value;
+        last = micros();
+    }
 }
 
-void setup() {
-
-	pinMode(slideEnablePin, OUTPUT);
-	pinMode(slideDirectionPin, OUTPUT);
-	pinMode(slidePulsePin, OUTPUT);
-
-	pinMode(gearEnablePin, OUTPUT);
-	pinMode(gearDirectionPin, OUTPUT);
-	pinMode(gearPulsePin, OUTPUT);
-
-	disableSlide();
-	disableGearRotation();
-    state = PRE_INIT;
+// arduino bsp will call setup once.
+// we setup our peripherals and counters, and disable
+// all periphral behavior here.
+void setup() 
+{
+    pinMode(slideEnablePin, OUTPUT);
+    pinMode(slideDirectionPin, OUTPUT);
+    pinMode(slidePulsePin, OUTPUT);
+    pinMode(gearEnablePin, OUTPUT);
+    pinMode(gearDirectionPin, OUTPUT);
+    pinMode(gearPulsePin, OUTPUT);
+    disableSlide();
+    disableGearRotation();
+    state = PRE_INIT; // our state machine starts at this node
     numTeethCut = 0;
     gearRotationCount = 0;
 }
 
+bool inReset()
+{
 
-void loop() {
+    // TODO.
+    // read a switch. 
+    // When the operator is letting the system out of reset
+    // the state machine may operate.
 
-	switch (state)
-	{
-	case PRE_INIT:
-		// print instructions for setup
-		disableGearRotation();
-		disableSlide();
-		state = INIT;
-		break;
-	case INIT:
-		numTeethCut = 0;
-		gearRotationCount = 0;
+    return false;
+} 
 
-		// initialize counts for new gear
-		// confirm readiness
-		// reset all peripherals
-		state = MOVE_TO_END;
-		break;
-	case MOVE_TO_END:
-		// enable the slide to move towards the end
-		// (we are cutting!)
-		setSlideDirection(TO_END);
-		enableSlide();
-		state = CHECK_END_SWITCH;
-		break;
-	case CHECK_END_SWITCH:
+bool inPause()
+{
+    // TODO.
+    // read a switch. 
+    // When the operator wants to make emergency Pause
+    // when this button is released, the operation will resume
+    // where it left from.
+    return false;
+}
+    
+
+// The arduino bsp will call loop repeatedly.
+// Our "loop" just implements a simple state-machine
+// to direct exection at each loop iteration.
+void loop() 
+{
+    static bool nreset = false;
+
+    if ( inPause() )
+    {
+         // Patience.
+         // 
+         // Just wait here for a second. No reason to keep polling
+         // so rapidly.  Whenever the Pause button is released
+         // this will be skipped.
+         delay(1000);
+         return;
+    }
+
+    // Look for the reset switch
+    // This is the control for the operator to allow the
+    // system to proceed with a new run from the initial 
+    // state.  Operator should not manipulate the Reset
+    // switch during a run!!  TODO block out Reset during a run.
+
+    if ( inReset() )
+    {
+         nreset = true;
+         return;
+    }
+
+    if ( nreset )
+    {
+        // when we come out of reset, make sure we start
+        // at the PRE_INIT state.
+
+        state = PRE_INIT;
+        nreset = false;
+    }
+
+    // what node are we in?  run the behavior based on our state.
+    switch (state)
+    {
+    case PRE_INIT:
+        // print instructions for setup
+        disableGearRotation();
+        disableSlide();
+        state = INIT;
+        break;
+    case INIT:
+        numTeethCut = 0;
+        gearRotationCount = 0;
+        // initialize counts for new gear
+        // confirm readiness
+        // reset all peripherals
+        state = MOVE_TO_END;
+        break;
+    case MOVE_TO_END:
+        // enable the slide to move towards the end
+        // (we are cutting!)
+        setSlideDirection(TO_END);
+        enableSlide();
+        state = CHECK_END_SWITCH;
+        break;
+    case CHECK_END_SWITCH:
         // check the state of the end switch
-		// if the switch shows contact, we need to reverse
-		// and go to MOVE_TO_PARK now
-		if (readEndSwitchContact())
-		{
-			state = STOP_AT_END;
-		}
-		else {
-			state = CHECK_END_SWITCH;
-		}
-		break;
+        // if the switch shows contact, we need to reverse
+        // and go to MOVE_TO_PARK now
+        if (readEndSwitchContact())
+        {
+            state = STOP_AT_END;
+        }
+        else 
+        {
+            // come back to this state.
+            state = CHECK_END_SWITCH;
+        }
+        break;
 
-	case STOP_AT_END:
-		disableSlide();
-		state = MOVE_TO_PARK;
-		break;
+    case STOP_AT_END:
+        disableSlide();
+        state = MOVE_TO_PARK;
+        break;
 
-	case MOVE_TO_PARK:
-		setSlideDirection(TO_PARK);
-		enableSlide();
-		state = CHECK_PARK_SWITCH;
-		break;
+    case MOVE_TO_PARK:
+        setSlideDirection(TO_PARK);
+        enableSlide();
+        state = CHECK_PARK_SWITCH;
+        break;
 
-
-	case CHECK_PARK_SWITCH:
+    case CHECK_PARK_SWITCH:
         // check the state of the park switch
-		// if the switch shows contact, we need to reverse
-		// and go to CHECK_COUNTS since we have made ONE pass over the gear.
-		if (readParkSwitchContact())
-		{
-			state = STOP_AT_PARK;
-		}
-		else {
-			state = CHECK_PARK_SWITCH;
-		}
-		break;
+        // if the switch shows contact, we need to reverse
+        // and go to CHECK_COUNTS since we have made ONE pass over the gear.
+        if (readParkSwitchContact())
+        {
+            state = STOP_AT_PARK;
+        }
+        else 
+        {
+            // come back to this state.
+            state = CHECK_PARK_SWITCH;
+        }
+        break;
 
-	case STOP_AT_PARK:
-		disableSlide();
-		state = CHECK_COUNTS;
-		break;
+    case STOP_AT_PARK:
+        disableSlide();
+        state = CHECK_COUNTS;
+        break;
 
-	case CHECK_COUNTS:
+    case CHECK_COUNTS:
+        // do all calculations on the counts
+        numTeethCut++;
+        // check if we're done with this gear.
+        if (doneWithGear())
+        {
+            state = COMPLETED_GEAR;
+        }
+        else 
+        {
+            state = ROTATE_GEAR;
+        }
+        break;
 
-		// do all calculations on the counts
-		numTeethCut++;
-
-		// check if we're done with this gear.
-		if (doneWithGear())
-		{
-			state = COMPLETED_GEAR;
-		}
-		else {
-			state = ROTATE_GEAR;
-		}
-		break;
-
-	case ROTATE_GEAR:
-		// we just do what is necesssary to rotate gear N deg.
-		// set direction of rotationMotor
+    case ROTATE_GEAR:
+        // we just do what is necesssary to rotate gear N deg.
+        // set direction of rotationMotor
         // enable the rotationMotor
-		gearRotationCount = 0;
-		setGearDirection(CW);
-		enableGearRotation();
-		state = CHECK_ROTATION;
-		break;
+        gearRotationCount = 0;
+        setGearDirection(CW);
+        enableGearRotation();
+        state = CHECK_ROTATION;
+        break;
 
-	case CHECK_ROTATION:
-		gearRotationCount++;
+    case CHECK_ROTATION:
+        gearRotationCount++;
+        if (gearRotationCount > GEAR_ROTATION_REQUIRED)
+        {
+            disableGearRotation();
+            state = DONE_ROTATION;
+        }
+        else
+        {
+            state = CHECK_ROTATION;
+        }
+        break;
 
-		if (gearRotationCount > GEAR_ROTATION_REQUIRED)
-		{
-			disableGearRotation();
-			state = DONE_ROTATION;
-		}
-		else
-		{
-			state = CHECK_ROTATION;
-		}
-		break;
+    case DONE_ROTATION:
+        // we've done rotating the gear.  
+        // we've made one simple pass to cut a tooth.
+        // start over
+        state = MOVE_TO_END;
+        break;
 
-	case DONE_ROTATION:
-		// we've done rotating the gear.  
-		// we've made one simple pass to cut a tooth.
-		// start over
-		state = MOVE_TO_END;
-		break;
+    case COMPLETED_GEAR:
+        // ring the bell, whatever...  
+        // this gear is done.  All teeth are cut.
+        state = RESET;
+        break;
+    case RESET:
+        // it's time to reset the system for a new part
 
-	case COMPLETED_GEAR:
-		// ring the bell.
-		// this gear is done.  All teeth are cut.
-		state = RESET;
-		break;
-	case RESET:
-		// it's time to reset the system for a new part
-		state = PRE_INIT;
-	}
+        // Note:
+        // TODO enable a kill-switch disablement. 
+        // We remain in RESET until the operator
+        // has removed the signal to stay in RESET.
+        // Goal: We do NOT enter PRE_INIT until the operator
+        // has swapped out the parts of the mechanism
+        // Until that's rectified, we are going to remain in RESET.
+        // BUGBUG 
+        // state = PRE_INIT;
+
+        state = RESET; /// yes, i know.  See note.
+    }
+
+    // leave the loop iteration
 }
