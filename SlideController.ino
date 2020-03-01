@@ -18,8 +18,8 @@
 const int BIG_GEAR_TEETH_COUNT = 60;
 const int SMALL_GEAR_TEETH_COUNT = 15;
 // Calibration data  -- do not edit
-const int SMALL_GEAR_ROTATION_REQUIRED = 1000;
-const int BIG_GEAR_ROTATION_REQUIRED = 1000;
+const int SMALL_GEAR_ROTATION_REQUIRED = 4; // TODO EDIT TO calibration data.
+const int BIG_GEAR_ROTATION_REQUIRED = 4; // TODO EDIT TO calibration data.
 // end of section
 
 // EDIT HERE:
@@ -43,11 +43,13 @@ const int TO_PARK = 0;
 const int slideEnablePin = 13;
 const int slideDirectionPin = 12;
 const int slidePulsePin = 11;
+const int contactEndSwitchPin = 10;
+const int contactParkSwitchPin = 9;
 const int gearEnablePin = 8;
 const int gearDirectionPin = 7;
 const int gearPulsePin = 6;
-const int contactEndSwitchPin = 10;
-const int contactParkSwitchPin = 9;
+const int nResetPin = 5;
+const int nPausePin = 4;
 
 // Define all of the nodes in the "state machine" graph.
 //
@@ -67,7 +69,9 @@ typedef enum {
     CHECK_ROTATION,
     DONE_ROTATION,
     COMPLETED_GEAR,
+	CHECK_RESET,
     RESET,
+	FAKE,
 } State;
 
 // Globals Variable
@@ -75,9 +79,11 @@ typedef enum {
 int numTeethCut = 0;
 int gearRotationCount = 0;
 State state = PRE_INIT;
-
+char INSTRUCTIONS[1024];
 
 // FUNCTIONS
+
+void setInstructions();
 
 // If all of the teeth needed are cut, return 1 (true)
 // else return 0  (false)
@@ -95,7 +101,7 @@ bool doneWithGear()
 bool readEndSwitchContact()
 {
     int pin = digitalRead(contactEndSwitchPin);
-    return (pin != 0);
+    return (pin == 0);
 }
 
 // If the Park Switch has made contact, return 1 (true)
@@ -103,7 +109,7 @@ bool readEndSwitchContact()
 bool readParkSwitchContact()
 {
     int pin = digitalRead(contactParkSwitchPin);
-    return (pin != 0);
+    return (pin == 0);
 }
 
 // enable the slide motor.  The slide motor is
@@ -190,6 +196,16 @@ void pulseSlidePin()
     }
 }
 
+bool releaseResetButton()
+{
+    int pin = digitalRead(nResetPin);
+	Serial.print("releasePin value: ");
+	Serial.print(pin);
+	Serial.print("\n");
+    return (pin == 0);
+}
+
+
 // arduino bsp will call setup once.
 // we setup our peripherals and counters, and disable
 // all periphral behavior here.
@@ -201,32 +217,30 @@ void setup()
     pinMode(gearEnablePin, OUTPUT);
     pinMode(gearDirectionPin, OUTPUT);
     pinMode(gearPulsePin, OUTPUT);
+	pinMode(nResetPin, INPUT_PULLUP);
+	pinMode(nPausePin, INPUT_PULLUP);
+
+	pinMode(contactEndSwitchPin, INPUT_PULLUP);
+	pinMode(contactParkSwitchPin, INPUT_PULLUP);
+
     disableSlide();
     disableGearRotation();
     state = PRE_INIT; // our state machine starts at this node
     numTeethCut = 0;
     gearRotationCount = 0;
+	setInstructions();
+	Serial.begin(115200);
 }
-
-bool inReset()
-{
-
-    // TODO.
-    // read a switch. 
-    // When the operator is letting the system out of reset
-    // the state machine may operate.
-
-    return false;
-} 
 
 bool inPause()
 {
-    // TODO.
-    // read a switch. 
     // When the operator wants to make emergency Pause
     // when this button is released, the operation will resume
     // where it left from.
-    return false;
+    int pin = digitalRead(nPausePin);
+	Serial.print(pin);
+	Serial.print("\n");
+    return (pin == 0);
 }
     
 
@@ -235,17 +249,18 @@ bool inPause()
 // to direct exection at each loop iteration.
 void loop() 
 {
-    static bool nreset = false;
+	static long debug_counter = 0;
 
     if ( inPause() )
     {
-         // Patience.
-         // 
-         // Just wait here for a second. No reason to keep polling
-         // so rapidly.  Whenever the Pause button is released
-         // this will be skipped.
-         delay(1000);
-         return;
+        Serial.print("Check pause\n");
+        // Patience.
+        // 
+        // Just wait here for a second. No reason to keep polling
+        // so rapidly.  Whenever the Pause button is released
+        // this will be skipped.
+        delay(1000);
+		return;
     }
 
     // Look for the reset switch
@@ -254,31 +269,39 @@ void loop()
     // state.  Operator should not manipulate the Reset
     // switch during a run!!  TODO block out Reset during a run.
 
-    if ( inReset() )
-    {
-         nreset = true;
-         return;
-    }
-
-    if ( nreset )
-    {
-        // when we come out of reset, make sure we start
-        // at the PRE_INIT state.
-
-        state = PRE_INIT;
-        nreset = false;
-    }
-
     // what node are we in?  run the behavior based on our state.
+
+	Serial.print("Debug counter: ");
+	Serial.print(debug_counter++);
+	Serial.print("\n");
     switch (state)
     {
     case PRE_INIT:
-        // print instructions for setup
+		// initially, disable the motors
         disableGearRotation();
         disableSlide();
-        state = INIT;
-        break;
+
+        // print instructions for setup
+		Serial.print(INSTRUCTIONS);
+
+		// check for reset release
+		state = CHECK_RESET;
+		break;
+
+	case CHECK_RESET:
+		if (releaseResetButton())
+		{
+			Serial.print("Released RESET. Proceed!\n");
+			state = INIT;
+		}
+		else
+		{
+			state = CHECK_RESET;
+		}
+		break;
+
     case INIT:
+		Serial.print("INIT step\n");
         numTeethCut = 0;
         gearRotationCount = 0;
         // initialize counts for new gear
@@ -289,6 +312,7 @@ void loop()
     case MOVE_TO_END:
         // enable the slide to move towards the end
         // (we are cutting!)
+		Serial.print("MOVE_TO_END initiated\n");
         setSlideDirection(TO_END);
         enableSlide();
         state = CHECK_END_SWITCH;
@@ -299,23 +323,32 @@ void loop()
         // and go to MOVE_TO_PARK now
         if (readEndSwitchContact())
         {
+			Serial.print("End Switch contacted\n");
             state = STOP_AT_END;
         }
         else 
         {
             // come back to this state.
+			Serial.print("Check End switch again\n");
             state = CHECK_END_SWITCH;
         }
         break;
 
     case STOP_AT_END:
+		Serial.print("Stopping at End. Disable motor!\n");
         disableSlide();
+		delay(100);
         state = MOVE_TO_PARK;
         break;
 
     case MOVE_TO_PARK:
+		Serial.print("Setting direction to Park\n");
         setSlideDirection(TO_PARK);
+		delay(100);
+		Serial.print("Slide Motor enabled\n");
         enableSlide();
+		delay(100);
+		Serial.print("Move to Park enabled..\n");
         state = CHECK_PARK_SWITCH;
         break;
 
@@ -325,26 +358,36 @@ void loop()
         // and go to CHECK_COUNTS since we have made ONE pass over the gear.
         if (readParkSwitchContact())
         {
+			Serial.print("Park Switch contacted\n");
             state = STOP_AT_PARK;
         }
         else 
         {
             // come back to this state.
+			Serial.print("Check Park switch again\n");
             state = CHECK_PARK_SWITCH;
         }
         break;
 
     case STOP_AT_PARK:
+		Serial.print("Stopping at Park. Disable motor!\n");
         disableSlide();
+		delay(100);
         state = CHECK_COUNTS;
         break;
 
     case CHECK_COUNTS:
         // do all calculations on the counts
         numTeethCut++;
+
+		Serial.print("Gear count: ");
+		Serial.print(numTeethCut);
+		Serial.print("\n");
+
         // check if we're done with this gear.
         if (doneWithGear())
         {
+			Serial.print("Completed the gear!\n");
             state = COMPLETED_GEAR;
         }
         else 
@@ -359,14 +402,20 @@ void loop()
         // enable the rotationMotor
         gearRotationCount = 0;
         setGearDirection(CW);
+		delay(100);
         enableGearRotation();
+		delay(100);
         state = CHECK_ROTATION;
         break;
 
     case CHECK_ROTATION:
         gearRotationCount++;
+		Serial.print("Gear rotating index: ");
+		Serial.print(gearRotationCount);
+		Serial.print("\n");
         if (gearRotationCount > GEAR_ROTATION_REQUIRED)
         {
+			Serial.print("Gear rotation finished.\n");
             disableGearRotation();
             state = DONE_ROTATION;
         }
@@ -380,6 +429,7 @@ void loop()
         // we've done rotating the gear.  
         // we've made one simple pass to cut a tooth.
         // start over
+		Serial.print("Done rotation. New state, move to End\n");
         state = MOVE_TO_END;
         break;
 
@@ -401,8 +451,23 @@ void loop()
         // BUGBUG 
         // state = PRE_INIT;
 
-        state = RESET; /// yes, i know.  See note.
+		Serial.print("At RESET, Start over at PRE_INIT\n");
+		state = PRE_INIT;
     }
 
+	delay(2000);
     // leave the loop iteration
+}
+
+
+void setInstructions()
+{
+	static char* instructions =
+		"This is the instructions for the software\n"
+		"Do step 1\n"
+		"Do step 2\n"
+		"Etc..\n";
+
+	memset(INSTRUCTIONS, 0, 1024);
+	memcpy(INSTRUCTIONS, instructions, strlen(instructions));
 }
