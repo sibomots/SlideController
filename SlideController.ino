@@ -199,9 +199,9 @@ void pulseSlidePin()
 bool releaseResetButton()
 {
     int pin = digitalRead(nResetPin);
-	Serial.print("releasePin value: ");
-	Serial.print(pin);
-	Serial.print("\n");
+	//Serial.print("releasePin value: ");
+	//Serial.print(pin);
+	//Serial.print("\n");
     return (pin == 0);
 }
 
@@ -238,8 +238,8 @@ bool inPause()
     // when this button is released, the operation will resume
     // where it left from.
     int pin = digitalRead(nPausePin);
-	Serial.print(pin);
-	Serial.print("\n");
+	//Serial.print(pin);
+	//Serial.print("\n");
     return (pin == 0);
 }
     
@@ -253,7 +253,7 @@ void loop()
 
     if ( inPause() )
     {
-        Serial.print("Check pause\n");
+        //Serial.print("Check pause\n");
         // Patience.
         // 
         // Just wait here for a second. No reason to keep polling
@@ -271,9 +271,9 @@ void loop()
 
     // what node are we in?  run the behavior based on our state.
 
-	Serial.print("Debug counter: ");
-	Serial.print(debug_counter++);
-	Serial.print("\n");
+	//Serial.print("Debug counter: ");
+	//Serial.print(debug_counter++);
+	//Serial.print("\n");
     switch (state)
     {
     case PRE_INIT:
@@ -329,7 +329,7 @@ void loop()
         else 
         {
             // come back to this state.
-			Serial.print("Check End switch again\n");
+			//Serial.print("Check End switch again\n");
             state = CHECK_END_SWITCH;
         }
         break;
@@ -364,7 +364,7 @@ void loop()
         else 
         {
             // come back to this state.
-			Serial.print("Check Park switch again\n");
+			//Serial.print("Check Park switch again\n");
             state = CHECK_PARK_SWITCH;
         }
         break;
@@ -455,7 +455,7 @@ void loop()
 		state = PRE_INIT;
     }
 
-	delay(2000);
+	// delay(2000);
     // leave the loop iteration
 }
 
